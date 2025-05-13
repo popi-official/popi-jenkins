@@ -44,16 +44,7 @@ pipeline {
                                 def imageTag = "${env.BUILD_NUMBER}"
 
                                 dir(module) {
-                                    // 2. Dockerfile 생성
-                                    def dockerfileContent = """
-                                    FROM openjdk:17-slim
-                                    WORKDIR /popi
-                                    COPY ./build/libs/${module}-0.0.1-SNAPSHOT.jar app.jar
-                                    ENTRYPOINT ["java", "-jar", "app.jar"]
-                                    """.stripIndent()
-                                    writeFile file: "Dockerfile", text: dockerfileContent
-
-                                    // 3. Docker 이미지 빌드
+                                    // 2. Docker 이미지 빌드
                                     def imageName = "${ECR_REPO}/${module}"
                                     def image = docker.build("${imageName}:${imageTag}", ".")
 
