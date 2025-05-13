@@ -103,7 +103,7 @@ pipeline {
 
                                 sh """
                                 cd gitops-repo/apps/${moduleName}
-                                sed -i '' "s/tag: .*/tag: ${imageTag}/" values.yaml
+                                sed -i "s|tag: .*|tag: ${imageTag}|" values.yaml
                                 git add values.yaml
                                 git commit -m "Update ${moduleName} image tag to ${imageTag}" || echo "No changes to commit"
                                 cd -
