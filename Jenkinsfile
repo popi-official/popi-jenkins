@@ -1,3 +1,5 @@
+def updateModules = []
+
 pipeline {
     agent any
 
@@ -6,7 +8,6 @@ pipeline {
         ECR_REPO = '446305434496.dkr.ecr.ap-northeast-2.amazonaws.com/popi-user'
         ECR_CREDENTIALS_ID = 'ecr:ap-northeast-2:aws-ecr'
         GITOPS_REPO = 'https://github.com/popi-official/popi-ops.git'
-        BASE_DIRECTORY = ''
     }
 
     stages {
@@ -16,8 +17,6 @@ pipeline {
                 sh 'git fetch origin develop'
             }
         }
-
-        def updateModules = []
 
         stage('Build & Push Changed Modules') {
             steps {
@@ -48,16 +47,16 @@ pipeline {
                                     def imageName = "${ECR_REPO}/${module}"
                                     def image = docker.build("${imageName}:${imageTag}", ".")
 
-                                    // 4. ECR 푸시
+                                    // 3. ECR 푸시
                                     docker.withRegistry("https://${ECR_REPO}", "${ECR_CREDENTIALS_ID}") {
                                         image.push(imageTag)
                                     }
                                 }
 
-                                // 5. slack 알림 전송
+                                // 4. slack 알림 전송
                                 slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
 
-                                // 6. 변경된 모듈 저장
+                                // 5. 변경된 모듈 저장
                                 def updateModule = original.collect { it.replaceAll(/^popi-/, '').replaceAll(/-service$/, '') }
                                 updateModules << [name: updateModule, tag: imageTag]
 
