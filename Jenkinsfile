@@ -59,7 +59,7 @@ pipeline {
                                 }
                             }
 
-                            slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module}")
+                            slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
 
                         } else {
                             echo "${module} 변경 없음 — 스킵"
