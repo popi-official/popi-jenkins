@@ -35,31 +35,37 @@ pipeline {
                         if (isModuleChanged) {
                             echo "변경된 모듈 감지됨: ${module} — 빌드 및 배포 수행"
 
-                            // 1. 빌드
-                            sh "./gradlew clean :${module}:build -x test"
-                            def imageTag = "${env.BUILD_NUMBER}"
+                            try {
+                                // 1. 빌드
+                                sh "./gradlew clean :${module}:build -x test"
+                                def imageTag = "${env.BUILD_NUMBER}"
 
-                            dir(module) {
-                                // 2. Dockerfile 생성
-                                def dockerfileContent = """
-                                FROM openjdk:17-slim
-                                WORKDIR /popi
-                                COPY ./build/libs/${module}-0.0.1-SNAPSHOT.jar app.jar
-                                ENTRYPOINT ["java", "-jar", "app.jar"]
-                                """.stripIndent()
-                                writeFile file: "Dockerfile", text: dockerfileContent
+                                dir(module) {
+                                    // 2. Dockerfile 생성
+                                    def dockerfileContent = """
+                                    FROM openjdk:17-slim
+                                    WORKDIR /popi
+                                    COPY ./build/libs/${module}-0.0.1-SNAPSHOT.jar app.jar
+                                    ENTRYPOINT ["java", "-jar", "app.jar"]
+                                    """.stripIndent()
+                                    writeFile file: "Dockerfile", text: dockerfileContent
 
-                                // 3. Docker 이미지 빌드
-                                def imageName = "${ECR_REPO}/${module}"
-                                def image = docker.build("${imageName}:${imageTag}", ".")
+                                    // 3. Docker 이미지 빌드
+                                    def imageName = "${ECR_REPO}/${module}"
+                                    def image = docker.build("${imageName}:${imageTag}", ".")
 
-                                // 4. ECR 푸시
-                                docker.withRegistry("https://${ECR_REPO}", "${ECR_CREDENTIALS_ID}") {
-                                    image.push(imageTag)
+                                    // 4. ECR 푸시
+                                    docker.withRegistry("https://${ECR_REPO}", "${ECR_CREDENTIALS_ID}") {
+                                        image.push(imageTag)
+                                    }
                                 }
-                            }
 
-                            slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
+                                slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
+
+                            } catch (e) {
+                                slackSend (channel: '#popi-jenkins-user', color: '#FF0000', message: "ECR push 실패: ${module}")
+                                echo "${module} 빌드 실패"
+                            }
 
                         } else {
                             echo "${module} 변경 없음 — 스킵"
