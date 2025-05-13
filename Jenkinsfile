@@ -37,6 +37,7 @@ pipeline {
 
                             // 1. 빌드
                             sh "./gradlew clean :${module}:build -x test"
+                            def imageTag = "${env.BUILD_NUMBER}"
 
                             dir(module) {
                                 // 2. Dockerfile 생성
@@ -50,7 +51,6 @@ pipeline {
 
                                 // 3. Docker 이미지 빌드
                                 def imageName = "${ECR_REPO}/${module}"
-                                def imageTag = "${env.BUILD_NUMBER}"
                                 def image = docker.build("${imageName}:${imageTag}", ".")
 
                                 // 4. ECR 푸시
