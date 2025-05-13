@@ -2,18 +2,22 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_REPO = 'https://github.com/popi-official/popi-user-server.git'
+        SOURCE_REPO = 'https://github.com/popi-official/popi-user-server.git'
         ECR_REPO = '446305434496.dkr.ecr.ap-northeast-2.amazonaws.com/popi-user'
         ECR_CREDENTIALS_ID = 'ecr:ap-northeast-2:aws-ecr'
+        GITOPS_REPO = 'https://github.com/popi-official/popi-ops.git'
+        BASE_DIRECTORY = ''
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'develop', url: "${GITHUB_REPO}"
+                git branch: 'develop', url: "${SOURCE_REPO}"
                 sh 'git fetch origin develop'
             }
         }
+
+        def updateModules = []
 
         stage('Build & Push Changed Modules') {
             steps {
@@ -60,7 +64,11 @@ pipeline {
                                     }
                                 }
 
+                                // 5. slack 알림 전송
                                 slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
+
+                                // 6. 변경된 모듈 저장
+                                updateModules << [name: module, tag: imageTag]
 
                             } catch (e) {
                                 slackSend (channel: '#popi-jenkins-user', color: '#FF0000', message: "ECR push 실패: ${module}")
@@ -70,6 +78,68 @@ pipeline {
                         } else {
                             echo "${module} 변경 없음 — 스킵"
                         }
+                    }
+                }
+            }
+        }
+
+        stage('Pull ArgoCD gitOps repository') {
+            steps {
+                git branch: 'main', url: "${GITOPS_REPO}"
+            }
+        }
+
+        stage('Install kustomize') {
+            steps {
+                script {
+                    def kustomizePath = "${env.WORKSPACE}/kustomize"
+                    if (!fileExists(kustomizePath)) {
+                        sh '''
+                            curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+                        '''
+                    }
+                    sh "${kustomizePath} version"
+                }
+            }
+        }
+
+        stage('Change image tag') {
+            steps {
+                script {
+                    def kustomizePath = "${env.WORKSPACE}/kustomize"
+
+                    updateModules.each { module ->
+                        def moduleName = module.name
+                        def tag = module.tag
+                        def imageName = "${ECR_REPO}/${moduleName}"
+                        def targetDir = "${BASE_DIRECTORY}/${moduleName}"
+
+                        echo "${moduleName} → GitOps image 태그 수정 (${imageName}:${tag})"
+
+                        dir(targetDir) {
+                            sh "${kustomizePath} edit set image ${imageName}:${tag}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Push to manifest repo') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'popi-config',
+                        usernameVariable: 'gitUsername',
+                        passwordVariable: 'gitPassword'
+                    ),
+                    string(credentialsId: 'github-email', variable: 'gitEmail')
+                ]) {
+                    script {
+                        sh "git config user.email ${gitEmail}"
+                        sh "git config user.name ${gitUsername}"
+                        sh "git add -A"
+                        sh "git commit -m '[jenkins] update image tag' || echo 'No changes to commit'"
+                        sh "git push https://${gitUsername}:${gitPassword}@/github.com/popi-official/popi-ops.git"
                     }
                 }
             }
