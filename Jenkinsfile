@@ -99,7 +99,7 @@ pipeline {
                                 def moduleName = module.name
                                 def imageTag = module.tag
 
-                                echo "GitOps Repo의 ${moduleName} values.yaml 파일을 ${imageTag}로 업데이트합니다."
+                                echo "GitOps Repo의 ${moduleName} values.yaml 파일의 이미지 태그를 ${imageTag}로 업데이트합니다."
 
                                 sh """
                                 cd gitops-repo/apps/${moduleName}
