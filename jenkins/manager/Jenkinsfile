@@ -53,7 +53,7 @@ pipeline {
                         cd gitops-repo/apps/manager-service
                         sed -i "s|tag: .*|tag: ${env.UPDATE_TAG}|" values.yaml
                         git add values.yaml
-                        git commit -m "Update manager-service image tag to ${env.UPDATE_TAG}" || echo "No changes to commit"
+                        git commit -m "chore: update manager-service image tag to ${env.UPDATE_TAG}" || echo "No changes to commit"
                         git push origin main
                         """
                     }

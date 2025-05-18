@@ -106,16 +106,20 @@ pipeline {
                                 sh """
                                 cd ${appDir}
                                 sed -i "s|tag: .*|tag: ${imageTag}|" values.yaml
-                                git add values.yaml
-                                git commit -m "Update ${moduleName} image tag to ${imageTag}" || echo "No changes to commit"
                                 cd -
                                 """
                             }
 
                             echo "모든 변경사항을 push합니다."
 
+                            def commitHeader = "chore: update image tags for deployment"
+                            def commitBody = updateModules.collect { "- ${it.name}: ${it.tag}" }.join("\n")
+                            def commitMessage = "${commitHeader}\n\n${commitBody}"
+
                             sh """
                             cd gitops-repo
+                            git add .
+                            git commit -m "${commitMessage}" || echo "No changes to commit"
                             git push origin main
                             """
                         } else {
