@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        SOURCE_REPO = 'https://github.com/popi-official/popi-manager-server.git'
+        ECR_REPO = '446305434496.dkr.ecr.ap-northeast-2.amazonaws.com/popi-manager'
+        ECR_CREDENTIALS_ID = 'ecr:ap-northeast-2:aws-ecr'
+        GITOPS_REPO = 'https://github.com/popi-official/popi-ops.git'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'develop', url: "${SOURCE_REPO}"
+                sh 'git fetch origin develop'
+            }
+        }
+
+        stage('Build & Push Image') {
+            steps {
+                script {
+                    def imageTag = "${env.BUILD_NUMBER}"
+
+                    sh './gradlew clean build -x test'
+
+                    def imageName = "${ECR_REPO}/${module}"
+                    def image = docker.build("${imageName}:${imageTag}", ".")
+                    
+                    docker.withRegistry("https://${ECR_REPO}", "${ECR_CREDENTIALS_ID}") {
+                        image.push(imageTag)
+                    }
+
+                    env.UPDATE_TAG = imageTag
+                }
+            }
+        }
+
+        stage('Update GitOps Repo') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'popi-gitops',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_TOKEN'
+                    ),
+                    string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
+                ]) {
+                    script {
+                        sh """
+                        rm -rf gitops-repo
+                        git config --global user.name ${GIT_USER}
+                        git config --global user.email ${GIT_EMAIL}
+                        git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/popi-official/popi-ops.git gitops-repo
+                        cd gitops-repo/apps/manager-service
+                        sed -i "s|tag: .*|tag: ${env.UPDATE_TAG}|" values.yaml
+                        git add values.yaml
+                        git commit -m "Update manager-service image tag to ${env.UPDATE_TAG}" || echo "No changes to commit"
+                        git push origin main
+                        """
+                    }
+                }
+            }
+        }        
+    }
+}
