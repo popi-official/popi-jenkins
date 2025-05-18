@@ -23,8 +23,7 @@ pipeline {
 
                     sh './gradlew clean build -x test'
 
-                    def imageName = "${ECR_REPO}/${module}"
-                    def image = docker.build("${imageName}:${imageTag}", ".")
+                    def image = docker.build("${ECR_REPO}:${imageTag}", ".")
                     
                     docker.withRegistry("https://${ECR_REPO}", "${ECR_CREDENTIALS_ID}") {
                         image.push(imageTag)
