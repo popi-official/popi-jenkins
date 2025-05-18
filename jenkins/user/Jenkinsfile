@@ -54,7 +54,7 @@ pipeline {
                                 }
 
                                 // 4. slack 알림 전송
-                                slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
+//                                slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
 
                                 // 5. 변경된 모듈 저장
                                 def updateModule = module.replaceAll(/^popi-/, '').replaceAll(/-service$/, '')
