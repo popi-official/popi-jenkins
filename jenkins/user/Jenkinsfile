@@ -57,7 +57,7 @@ pipeline {
 //                                slackSend (channel: '#popi-jenkins-user', color: '#00FF00', message: "ECR push 성공: ${module} [빌드 번호: ${imageTag}]")
 
                                 // 5. 변경된 모듈 저장
-                                def updateModule = module.replaceAll(/^popi-/, '').replaceAll(/-service$/, '')
+                                def updateModule = module.replaceAll(/^popi-/, '')
                                 updateModules << [name: updateModule, tag: imageTag]
 
                             } catch (e) {
@@ -99,10 +99,12 @@ pipeline {
                                 def moduleName = module.name
                                 def imageTag = module.tag
 
+                                def appDir = "gitops-repo/apps/${moduleName}"
+
                                 echo "GitOps Repo의 ${moduleName} values.yaml 파일의 이미지 태그를 ${imageTag}로 업데이트합니다."
 
                                 sh """
-                                cd gitops-repo/apps/${moduleName}
+                                cd ${appDir}
                                 sed -i "s|tag: .*|tag: ${imageTag}|" values.yaml
                                 git add values.yaml
                                 git commit -m "Update ${moduleName} image tag to ${imageTag}" || echo "No changes to commit"
