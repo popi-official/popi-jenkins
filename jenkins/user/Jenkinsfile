@@ -23,7 +23,7 @@ pipeline {
                 script {
                     def moduleList = env.MODULE_LIST.split(',')
                     // origin/develop과 비교하여 변경된 파일 목록
-                    def changedFiles = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                    def changedFiles = sh(script: "git diff --name-only origin/develop...HEAD", returnStdout: true).trim().split("\n")
 
                     echo "Changed files since origin/develop:\n${changedFiles.join('\n')}"
 
