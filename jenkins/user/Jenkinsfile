@@ -120,6 +120,7 @@ pipeline {
                             cd gitops-repo
                             git add .
                             git commit -m "${commitMessage}" || echo "No changes to commit"
+                            git pull --rebase origin main
                             git push origin main
                             """
                         } else {
