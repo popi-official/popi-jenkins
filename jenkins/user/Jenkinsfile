@@ -22,9 +22,10 @@ pipeline {
             steps {
                 script {
                     def moduleList = env.MODULE_LIST.split(',')
-                    // origin/develop과 비교하여 변경된 파일 목록
-                    def changedFiles = sh(script: "git diff --name-only origin/develop~1..origin/develop", returnStdout: true).trim().split("\n")
+                    def currentCommit = sh(script: "git rev-parse origin/develop", returnStdout: true).trim()
+                    def previousCommit = sh(script: "git rev-list --parents -n 1 ${currentCommit}", returnStdout: true).trim().split(" ")[1]
 
+                    def changedFiles = sh(script: "git diff --name-only ${previousCommit} ${currentCommit}", returnStdout: true).trim().split("\n")
                     echo "Changed files since origin/develop:\n${changedFiles.join('\n')}"
 
                     moduleList.each { module ->
