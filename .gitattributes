@@ -1,0 +1,2 @@
+jenkins/manager/Jenkinsfile linguist-language=Groovy linguist-detectable=true
+jenkins/user/Jenkinsfile linguist-language=Groovy linguist-detectable=true
